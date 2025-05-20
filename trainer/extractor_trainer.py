@@ -25,7 +25,7 @@ class ExtractorTrainer:
         sampler: OnlineSampler,
         logger: WandbLogger,
         writer: SummaryWriter,
-        timesteps: int = 1e6,
+        epochs: int = 1e6,
         batch_size: int = 1024,
         seed: int = 0,
     ) -> None:
@@ -38,9 +38,8 @@ class ExtractorTrainer:
         self.writer = writer
 
         # training parameters
-        self.timesteps = timesteps
+        self.epochs = epochs
         self.batch_size = batch_size
-        self.nupdates = int(self.timesteps // self.batch_size)
 
         # initialize the essential training components
         self.last_min_loss = 1e10
@@ -67,9 +66,9 @@ class ExtractorTrainer:
         eval_idx = 0
         self.extractor.train()
         with tqdm(
-            total=self.timesteps, desc=f"{self.extractor.name} Training (Timesteps)"
+            total=self.epochs, desc=f"{self.extractor.name} Training (Timesteps)"
         ) as pbar:
-            while pbar.n < self.timesteps:
+            while pbar.n < self.epochs:
                 step = pbar.n + 1  # + 1 to avoid zero division
 
                 indices = torch.randperm(num_samples)[: self.batch_size]
@@ -83,29 +82,30 @@ class ExtractorTrainer:
                 )
 
                 # Calculate expected remaining time
-                pbar.update(timesteps)
+                pbar.update(1)
 
                 elapsed_time = time.time() - start_time
                 avg_time_per_iter = elapsed_time / step
-                remaining_time = avg_time_per_iter * (self.timesteps - step)
+                remaining_time = avg_time_per_iter * (self.epochs - step)
 
                 # Update environment steps and calculate time metrics
-                loss_dict[f"{self.extractor.name}/analytics/timesteps"] = step
+                loss_dict[f"{self.extractor.name}/analytics/epochs"] = step
                 loss_dict[f"{self.extractor.name}/analytics/update_time"] = update_time
                 loss_dict[f"{self.extractor.name}/analytics/remaining_time (hr)"] = (
                     remaining_time / 3600
                 )  # Convert to hours
 
                 self.write_log(loss_dict, step=step)
-                self.write_image(
-                    image=comparing_img,
-                    step=step,
-                    logdir="Image",
-                    name="Reconstruction",
-                )
 
                 #### EVALUATIONS ####
-                if step > eval_idx * int(self.timesteps / 10):
+                if step > eval_idx * int(self.epochs / 10):
+                    self.write_image(
+                        image=comparing_img,
+                        step=step,
+                        logdir="Image",
+                        name="Reconstruction",
+                    )
+
                     eval_idx += 1
                     self.loss_list.append(loss_dict[f"{self.extractor.name}/loss"])
                     if np.mean(self.loss_list) < self.last_min_loss:

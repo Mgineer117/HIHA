@@ -14,7 +14,7 @@ class Extractor(Base):
         self,
         network: nn.Module,
         extractor_lr: float,
-        timesteps: int,
+        epochs: int,
         minibatch_size: int,
         device: str = "cpu",
     ):
@@ -22,7 +22,7 @@ class Extractor(Base):
 
         ### constants
         self.name = "Extractor"
-        self.nupdates = int(timesteps // minibatch_size)
+        self.epochs = epochs
 
         ### trainable parameters
         self.network = network
@@ -37,7 +37,7 @@ class Extractor(Base):
         self.to(self.device)
 
     def lr_lambda(self, step: int):
-        return 1.0 - float(step) / float(self.nupdates)
+        return 1.0 - float(step) / float(self.epochs)
 
     def to_device(self, device):
         self.device = device
@@ -94,7 +94,7 @@ class Extractor(Base):
             if param.requires_grad:  # Only include parameters that require gradients
                 weight_loss += torch.norm(param, p=2)  # L
 
-        loss = 1e-4 * encoder_loss + decoder_loss + 1e-6 * weight_loss
+        loss = encoder_loss + decoder_loss + 1e-6 * weight_loss
 
         self.optimizer.zero_grad()
         loss.backward()

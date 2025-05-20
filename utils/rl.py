@@ -76,7 +76,7 @@ def get_extractor(args):
     extractor = Extractor(
         network=feature_network,
         extractor_lr=args.extractor_lr,
-        timesteps=args.extractor_timesteps,
+        epochs=args.extractor_epochs,
         minibatch_size=args.minibatch_size,
         device=args.device,
     )

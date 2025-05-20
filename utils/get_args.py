@@ -63,10 +63,10 @@ def get_args():
         "--num-options", type=int, default=10, help="Number of samples for training."
     )
     parser.add_argument(
-        "--extractor-type", type=str, default="VAE", help="Base learning rate."
+        "--extractor-type", type=str, default="CNN", help="Base learning rate."
     )
     parser.add_argument(
-        "--extractor-lr", type=float, default=1e-3, help="Base learning rate."
+        "--extractor-lr", type=float, default=1e-4, help="Base learning rate."
     )
     parser.add_argument(
         "--meta-actor-lr", type=float, default=None, help="Base learning rate."
@@ -90,9 +90,9 @@ def get_args():
         "--timesteps", type=int, default=None, help="Number of training epochs."
     )
     parser.add_argument(
-        "--extractor-timesteps",
+        "--extractor-epochs",
         type=int,
-        default=1e7,
+        default=20000,
         help="Number of training epochs.",
     )
     parser.add_argument(

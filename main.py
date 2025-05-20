@@ -33,6 +33,8 @@ def run(args, seed, unique_id, exp_time):
         from algorithms.meta_trpo import HIHA_Algorithm
 
         algo = HIHA_Algorithm(env=env, logger=logger, writer=writer, args=args)
+    else:
+        raise NotImplementedError(f"{args.algo_name} is not implemented.")
 
     algo.begin_training()
     wandb.finish()

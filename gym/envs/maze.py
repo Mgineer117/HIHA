@@ -12,6 +12,7 @@ from typing import (
 )
 
 import numpy as np
+import torch
 from gymnasium import spaces
 from gymnasium.core import ActType, ObsType
 from numpy.typing import NDArray
@@ -37,7 +38,7 @@ class Maze(MultiGridEnv):
         max_steps: int = 300,
         highlight_visible_cells: bool | None = False,
         tile_size: int = 10,
-        state_representation: str = "positional",
+        state_representation: str = "tensor",
         render_mode: Literal["human", "rgb_array"] = "rgb_array",
     ):
         ### fundamental parameters
@@ -67,31 +68,32 @@ class Maze(MultiGridEnv):
         ]
 
         # Define positions for goals and agents
-        self.goal_positions = [(17, 17)]
+        self.goal_positions = [(16, 16)]
         self.agent_positions = [(7, 12)]
 
         # Explicit maze structure based on the image
         self.map = [
-            "####################",
-            "#                  #",
-            "#                  #",
-            "#       ###  ###  ##",
-            "#       #      #   #",
-            "#####          #   #",
-            "#   #          #   #",
-            "#   #   #      #   #",
-            "#   #   #      #   #",
-            "#   #   ########   #",
-            "#   #      #   #   #",
-            "#   #      #       #",
-            "#          #       #",
-            "#          #   #   #",
-            "#   #      #   #####",
-            "#   #      #       #",
-            "#   ########       #",
-            "#                  #",
-            "#                  #",
-            "####################",
+            [
+                "###################",
+                "#                 #",
+                "#                 #",
+                "###########  ###  #",
+                "#       #      #  #",
+                "#       #      #  #",
+                "#              #  #",
+                "###### ##      #  #",
+                "#   #   #      #  #",
+                "#   #   ########  #",
+                "#   #     #       #",
+                "#   #     #       #",
+                "#         #       #",
+                "#   #     #       #",
+                "#   #     ## ######",
+                "#   #######   #   #",
+                "#                 #",
+                "#             #   #",
+                "###################",
+            ]
         ]
 
         self.width = len(self.map[self.grid_type][0])
@@ -140,7 +142,7 @@ class Maze(MultiGridEnv):
         self.grid = Grid(width, height, self.world)
 
         # Translate the maze structure into the grid
-        for x, row in enumerate(self.map):
+        for x, row in enumerate(self.map[self.grid_type]):
             for y, cell in enumerate(row):
                 if cell == "#":
                     self.grid.set(x, y, Wall(self.world))
@@ -242,25 +244,6 @@ class Maze(MultiGridEnv):
                 fwd_pos = tuple(a + b for a, b in zip(curr_pos, (-1, 0)))
                 fwd_cell = self.grid.get(*fwd_pos)
 
-                # # Compute the distance between the current position and the goal
-                # dist_reward = np.linalg.norm(
-                #     np.array(self.goal_positions[self.grid_type]) - np.array(fwd_pos),
-                #     ord=2,
-                # )
-
-                # # Normalize the distance with the maximum possible distance in the grid
-                # dist_norm_reward = dist_reward / np.linalg.norm(
-                #     [self.width, self.height], ord=2
-                # )
-
-                # # Invert the normalized distance to make reward larger as the agent gets closer
-                # inverse_dist_reward = 1 - dist_norm_reward  # Closer => higher reward
-
-                # # Scale the reward and add to the total rewards
-                # rewards += (
-                #     0.1 * inverse_dist_reward
-                # )  # Weak reward signal, range 0 ~ 0.1
-
                 if fwd_cell is not None:
                     if fwd_cell.type == "goal":
                         done = True
@@ -318,7 +301,7 @@ class Maze(MultiGridEnv):
                     self.goal_positions[self.grid_type][1],
                 ]
             )
-            obs = obs / np.maximum(self.grid_size[0], self.grid_size[1])
+            obs = obs / np.maximum(self.width, self.height)
         elif self.state_representation == "tensor":
             obs = [
                 self.grid.encode_for_agents(agent_pos=self.agents[i].pos)
@@ -332,3 +315,104 @@ class Maze(MultiGridEnv):
                 "Please use 'positional' or 'tensor'."
             )
         return obs
+
+    def get_rewards_heatmap(self, extractor: torch.nn.Module, eigenvectors: np.ndarray):
+        assert self.state_representation in [
+            "vectorized_tensor",
+            "tensor",
+        ], f"Unsupported state representation: {self.state_representation}"
+
+        # Environment indices
+        empty_idx = 1
+        goal_idx = 8
+        agent_idx = 10
+        wall_idx = 2
+
+        # Get base state
+        state, _ = self.reset()
+        agent_pos = np.where(state == agent_idx)
+        state[agent_pos] = empty_idx
+        self.close()
+
+        if self.state_representation != "tensor":
+            state = state.reshape(self.width, self.height, -1)
+
+        mask = (state != wall_idx) & (state != goal_idx)
+        non_mask = ~mask
+
+        heatmaps = []
+        grid_shape = (self.width, self.height, 1)
+        for n in range(eigenvectors.shape[0]):
+            eig = eigenvectors[n]
+            reward_map = np.full(grid_shape, fill_value=np.nan)
+
+            for i in range(grid_shape[0]):
+                for j in range(grid_shape[1]):
+                    current_idx = (i, j, 0)
+                    current_val = state[current_idx]
+
+                    if current_val == wall_idx or current_val == goal_idx:
+                        reward_map[current_idx] = 0.0
+                    else:
+                        # Copy and manipulate state
+                        state_copy = np.copy(state)
+                        state_copy[current_idx] = agent_idx
+                        with torch.no_grad():
+                            feature, _ = extractor(state_copy)
+                        feature = feature.cpu().numpy().squeeze(0)
+
+                        reward = np.dot(eig, feature)
+                        reward_map[current_idx] = reward
+
+            # reward_map = # normalize between -1 to 1
+            pos_mask = np.logical_and(mask, (reward_map > 0))
+            neg_mask = np.logical_and(mask, (reward_map < 0))
+
+            # Normalize positive values to [0, 1]
+            if np.any(pos_mask):
+                pos_max, pos_min = (
+                    reward_map[pos_mask].max(),
+                    reward_map[pos_mask].min(),
+                )
+                if pos_max != pos_min:
+                    reward_map[pos_mask] = (reward_map[pos_mask] - pos_min) / (
+                        pos_max - pos_min + 1e-4
+                    )
+
+            # Normalize negative values to [-1, 0]
+            if np.any(neg_mask):
+                neg_max, neg_min = (
+                    reward_map[neg_mask].max(),
+                    reward_map[neg_mask].min(),
+                )
+                if neg_max != neg_min:
+                    reward_map[neg_mask] = (reward_map[neg_mask] - neg_min) / (
+                        neg_max - neg_min + 1e-4
+                    ) - 1.0
+
+            # Set all other entries (walls, empty) to 0
+            reward_map = reward_map.reshape(self.width, self.height, -1)
+            reward_map = self.reward_map_to_rgb(reward_map, mask)
+
+            # set color theme as blue and red (blue = -1 and red = 1)
+            # set wall color at value 0 and goal idx as 1
+            heatmaps.append(reward_map)
+
+        return heatmaps
+
+    def reward_map_to_rgb(self, reward_map: np.ndarray, mask) -> np.ndarray:
+        rgb_img = np.zeros((self.width, self.height, 3), dtype=np.float32)
+
+        pos_mask = np.logical_and(mask, (reward_map > 0))
+        neg_mask = np.logical_and(mask, (reward_map < 0))
+
+        # Blue for negative: map [-1, 0] → [1, 0]
+        rgb_img[neg_mask[:, :, 0], 2] = -reward_map[neg_mask]  # blue channel
+
+        # Red for positive: map [0, 1] → [0, 1]
+        rgb_img[pos_mask[:, :, 0], 0] = reward_map[pos_mask]  # red channel
+
+        # rgb_img.flatten()[mask] to grey
+        rgb_img[~mask[:, :, 0], :] = 0.5
+
+        return rgb_img

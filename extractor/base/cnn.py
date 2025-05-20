@@ -75,7 +75,7 @@ class CNN(nn.Module):
 
         self.encoder_fc = MLP(
             input_dim=self.flatten_dim,
-            hidden_dims=[int(self.flatten_dim / 2), int(self.flatten_dim / 4)],
+            hidden_dims=[512, 256, 256, 128],
             output_dim=feature_dim,
             activation=activation,
         )
@@ -84,31 +84,22 @@ class CNN(nn.Module):
             *self.encoder_cnn, nn.Flatten(), self.encoder_fc, nn.Sigmoid()
         )
 
-        # self.mu = nn.Linear(
-        #     in_features=self.flatten_dim,
-        #     out_features=feature_dim,
-        # )
-        # self.logstd = nn.Linear(
-        #     in_features=self.flatten_dim,
-        #     out_features=feature_dim,
-        # )
-
         ### Decoding module
         self.de_latent = MLP(
             input_dim=feature_dim,
-            hidden_dims=[int(self.flatten_dim / 2)],
+            hidden_dims=[64],
             activation=activation,
         )
 
         self.de_action = MLP(
             input_dim=action_dim,
-            hidden_dims=[int(self.flatten_dim / 2)],
+            hidden_dims=[64],
             activation=activation,
         )
 
         self.decoder_fc = MLP(
-            input_dim=self.flatten_dim,
-            hidden_dims=[self.flatten_dim, self.flatten_dim],
+            input_dim=128,
+            hidden_dims=[256, 256, 512],
             output_dim=self.flatten_dim,
             activation=activation,
         )
@@ -122,6 +113,7 @@ class CNN(nn.Module):
             nn.ConvTranspose2d(64, 32, kernel_size=3, stride=2, padding=1),
             nn.ELU(),
             nn.Conv2d(32, self.in_channel, kernel_size=3, stride=1, padding=1),
+            # nn.ReLU(),
             Permute((0, 2, 3, 1)),
         )
 
@@ -153,7 +145,6 @@ class CNN(nn.Module):
         return features, {"loss": torch.tensor(0.0).to(self.device)}
 
     def decode(self, features: torch.Tensor, actions: torch.Tensor):
-        print(features)
         out1 = self.de_latent(features)
         out2 = self.de_action(actions)
         logits = torch.cat((out1, out2), axis=-1)

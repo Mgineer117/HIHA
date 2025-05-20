@@ -113,7 +113,7 @@ class HIHA_Algorithm(nn.Module):
                 sampler=sampler,
                 logger=self.logger,
                 writer=self.writer,
-                timesteps=self.args.extractor_timesteps,
+                epochs=self.args.extractor_epochs,
                 batch_size=self.args.batch_size,
             )
             final_timesteps = trainer.train()
