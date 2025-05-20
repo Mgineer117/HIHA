@@ -92,39 +92,39 @@ class HIHA_Algorithm(nn.Module):
         model_path = f"model/{self.args.env_name}-feature_network.pth"
         extractor = get_extractor(self.args)
 
-        if not os.path.exists(model_path):
-            uniform_random_policy = UniformRandom(
-                state_dim=self.args.state_dim,
-                action_dim=self.args.action_dim,
-                is_discrete=self.args.is_discrete,
-                device=self.args.device,
-            )
-            sampler = OnlineSampler(
-                state_dim=self.args.state_dim,
-                action_dim=self.args.action_dim,
-                episode_len=self.args.episode_len,
-                batch_size=16384,
-                verbose=False,
-            )
-            trainer = ExtractorTrainer(
-                env=self.env,
-                random_policy=uniform_random_policy,
-                extractor=extractor,
-                sampler=sampler,
-                logger=self.logger,
-                writer=self.writer,
-                epochs=self.args.extractor_epochs,
-                batch_size=self.args.batch_size,
-            )
-            final_timesteps = trainer.train()
-            torch.save(extractor.state_dict(), model_path)
+        # if not os.path.exists(model_path):
+        uniform_random_policy = UniformRandom(
+            state_dim=self.args.state_dim,
+            action_dim=self.args.action_dim,
+            is_discrete=self.args.is_discrete,
+            device=self.args.device,
+        )
+        sampler = OnlineSampler(
+            state_dim=self.args.state_dim,
+            action_dim=self.args.action_dim,
+            episode_len=self.args.episode_len,
+            batch_size=16384,
+            verbose=False,
+        )
+        trainer = ExtractorTrainer(
+            env=self.env,
+            random_policy=uniform_random_policy,
+            extractor=extractor,
+            sampler=sampler,
+            logger=self.logger,
+            writer=self.writer,
+            epochs=self.args.extractor_epochs,
+            batch_size=self.args.batch_size,
+        )
+        final_timesteps = trainer.train()
+        # torch.save(extractor.state_dict(), model_path)
 
-            self.current_timesteps += final_timesteps
-        else:
-            extractor.load_state_dict(
-                torch.load(model_path, map_location=self.args.device)
-            )
-            extractor.to(self.args.device)
+        self.current_timesteps += final_timesteps
+        # else:
+        #     extractor.load_state_dict(
+        #         torch.load(model_path, map_location=self.args.device)
+        #     )
+        #     extractor.to(self.args.device)
 
         self.extractor = extractor
 
