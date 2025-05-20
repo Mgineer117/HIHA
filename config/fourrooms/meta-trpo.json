@@ -1,0 +1,14 @@
+{
+    "timesteps": 1e7,
+    "actor_lr": 3e-4,
+    "meta_actor_lr": 3e-3,
+    "critic_lr": 1e-3,
+    "eps_clip": 0.2,
+    "K_epochs": 5,
+    "num_local_updates": 5,
+    "target_kl": 0.01,
+    "num_minibatch": 8,
+    "minibatch_size": 128,
+    "batch_size": 1024,
+    "gamma": 0.99
+}
