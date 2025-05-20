@@ -148,7 +148,11 @@ __pycache__/
 *.log
 wandb
 
+# log/eval_log/*
 log/train_log/*
+
+# Old test files
+old_main.py
 
 # Ignore all shell scripts (any .sh files)
 *.sh

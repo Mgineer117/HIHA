@@ -1,0 +1,58 @@
+{
+  "os": "Linux-6.11.0-25-generic-x86_64-with-glibc2.39",
+  "python": "CPython 3.12.9",
+  "startedAt": "2025-05-20T22:06:50.458827Z",
+  "args": [
+    "--env-name",
+    "rooms-v0",
+    "--algo-name",
+    "meta-trpo",
+    "--K-epochs",
+    "10",
+    "--marker",
+    "10"
+  ],
+  "program": "/home/minjae/research/HIHA/main.py",
+  "codePath": "main.py",
+  "git": {
+    "remote": "https://github.com/Mgineer117/HIHA.git",
+    "commit": "14a493ff0ef09dfa30abd02f04e09c1120f6bab4"
+  },
+  "email": "mj.research117@gmail.com",
+  "root": "/home/minjae/research/HIHA",
+  "host": "minjae-uiuc",
+  "executable": "/home/minjae/miniconda3/envs/hiha/bin/python3",
+  "codePathLocal": "main.py",
+  "cpu_count": 12,
+  "cpu_count_logical": 24,
+  "gpu": "NVIDIA GeForce RTX 4070 SUPER",
+  "gpu_count": 2,
+  "disk": {
+    "/": {
+      "total": "1451789373440",
+      "used": "780778061824"
+    }
+  },
+  "memory": {
+    "total": "32739909632"
+  },
+  "cpu": {
+    "count": 12,
+    "countLogical": 24
+  },
+  "gpu_nvidia": [
+    {
+      "name": "NVIDIA GeForce RTX 4070 SUPER",
+      "memoryTotal": "12878610432",
+      "cudaCores": 7168,
+      "architecture": "Ada"
+    },
+    {
+      "name": "NVIDIA GeForce GTX 1060 6GB",
+      "memoryTotal": "6442450944",
+      "cudaCores": 1280,
+      "architecture": "Pascal"
+    }
+  ],
+  "cudaVersion": "12.4"
+}

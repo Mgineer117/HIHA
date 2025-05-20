@@ -1,0 +1,90 @@
+[36;1mSaving config:
+[0m
+{
+    "K_epochs":	10,
+    "action_dim":	"4",
+    "actor_fc_dim":	[
+        64,
+        64
+    ],
+    "actor_lr":	0.0003,
+    "algo_name":	"meta-trpo",
+    "batch_size":	2048,
+    "critic_fc_dim":	[
+        128,
+        128
+    ],
+    "critic_lr":	0.0005,
+    "device":	"cuda:0",
+    "entropy_scaler":	0.001,
+    "env_name":	"rooms-v0",
+    "episode_len":	300,
+    "eps_clip":	0.2,
+    "eval_num":	10,
+    "extractor_epochs":	20000,
+    "extractor_lr":	0.0001,
+    "extractor_type":	"CNN",
+    "gae":	0.95,
+    "gamma":	0.99,
+    "gpu_idx":	0,
+    "group":	"05-20_17-06-50.024207-1d4d",
+    "is_discrete":	true,
+    "load_pretrained_model":	false,
+    "log_interval":	100,
+    "logdir":	"log/train_log/05-20_17-06-50.024207-1d4d",
+    "marker":	10,
+    "meta_actor_lr":	0.001,
+    "minibatch_size":	256,
+    "name":	"meta-trpo-rooms-v0-1d4d-seed:1825",
+    "num_local_updates":	5,
+    "num_minibatch":	16,
+    "num_options":	10,
+    "num_runs":	10,
+    "project":	"Exp",
+    "seed":	1825,
+    "state_dim":	[
+        19,
+        19,
+        1
+    ],
+    "target_kl":	0.01,
+    "timesteps":	10000000.0
+}
+Extractor Training (Timesteps):   7%|███████████████████████                                                                                                                                                                                                                                                                                                   | 1472/20000 [01:15<15:46, 19.57it/s]
+Traceback (most recent call last):
+  File "/home/minjae/research/HIHA/main.py", line 62, in <module>
+    run(args, seed, unique_id, exp_time)
+  File "/home/minjae/research/HIHA/main.py", line 39, in run
+    algo.begin_training()
+  File "/home/minjae/research/HIHA/algorithms/meta_trpo.py", line 32, in begin_training
+    self.define_extractor()
+  File "/home/minjae/research/HIHA/algorithms/meta_trpo.py", line 119, in define_extractor
+    final_timesteps = trainer.train()
+                      ^^^^^^^^^^^^^^^
+  File "/home/minjae/research/HIHA/trainer/extractor_trainer.py", line 80, in train
+    loss_dict, timesteps, comparing_img, update_time = self.extractor.learn(
+                                                       ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/minjae/research/HIHA/extractor/extractor.py", line 107, in learn
+    grad_dict, norm_dict = self.get_grad_weight_norm()
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/minjae/research/HIHA/extractor/extractor.py", line 134, in get_grad_weight_norm
+    grad_dict = self.compute_gradient_norm(
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/minjae/research/HIHA/policy/base.py", line 51, in compute_gradient_norm
+    total_norm = torch.tensor(0.0, device=device)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt
+Exception ignored in atexit callback: <function _start_and_connect_service.<locals>.teardown_atexit at 0x79cf6fbf3c40>
+Traceback (most recent call last):
+  File "/home/minjae/miniconda3/envs/hiha/lib/python3.12/site-packages/wandb/sdk/lib/service_connection.py", line 94, in teardown_atexit
+    conn.teardown(hooks.exit_code)
+  File "/home/minjae/miniconda3/envs/hiha/lib/python3.12/site-packages/wandb/sdk/lib/service_connection.py", line 226, in teardown
+    self._router.join()
+  File "/home/minjae/miniconda3/envs/hiha/lib/python3.12/site-packages/wandb/sdk/interface/router.py", line 75, in join
+    self._thread.join()
+  File "/home/minjae/miniconda3/envs/hiha/lib/python3.12/threading.py", line 1149, in join
+    self._wait_for_tstate_lock()
+  File "/home/minjae/miniconda3/envs/hiha/lib/python3.12/threading.py", line 1169, in _wait_for_tstate_lock
+    if lock.acquire(block, timeout):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt:
