@@ -5,7 +5,7 @@
     "critic_lr": 5e-4,
     "eps_clip": 0.2,
     "K_epochs": 5,
-    "num_local_updates": 5,
+    "num_local_updates": 10,
     "target_kl": 0.01,
     "num_minibatch": 16,
     "minibatch_size": 256,
