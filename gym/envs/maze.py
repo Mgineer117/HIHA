@@ -69,7 +69,7 @@ class Maze(MultiGridEnv):
 
         # Define positions for goals and agents
         self.goal_positions = [(16, 16)]
-        self.agent_positions = [(7, 12)]
+        self.agent_positions = [(5, 1)]
 
         # Explicit maze structure based on the image
         self.map = [
@@ -77,7 +77,7 @@ class Maze(MultiGridEnv):
                 "###################",
                 "#                 #",
                 "#                 #",
-                "###########  ###  #",
+                "############ ###  #",
                 "#       #      #  #",
                 "#       #      #  #",
                 "#              #  #",
@@ -85,10 +85,10 @@ class Maze(MultiGridEnv):
                 "#   #   #      #  #",
                 "#   #   ########  #",
                 "#   #     #       #",
-                "#   #     #       #",
                 "#         #       #",
                 "#   #     #       #",
-                "#   #     ## ######",
+                "#   #     #       #",
+                "#   #     #   ## ##",
                 "#   #######   #   #",
                 "#                 #",
                 "#             #   #",

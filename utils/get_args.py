@@ -102,7 +102,7 @@ def get_args():
         "--eval-num", type=int, default=10, help="Number of training epochs."
     )
     parser.add_argument(
-        "--marker", type=int, default=50, help="Number of training epochs."
+        "--marker", type=int, default=2, help="Number of training epochs."
     )
     parser.add_argument("--num-minibatch", type=int, default=None, help="")
     parser.add_argument("--minibatch-size", type=int, default=None, help="")

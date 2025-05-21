@@ -35,8 +35,8 @@ class Rooms(MultiGridEnv):
     def __init__(
         self,
         grid_type: int = 0,
-        max_steps=300,
-        highlight_visible_cells=False,
+        max_steps: int = 200,
+        highlight_visible_cells: bool = False,
         tile_size: int = 10,
         state_representation: str = "tensor",
         render_mode: Literal["human", "rgb_array"] = "rgb_array",
