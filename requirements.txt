@@ -1,0 +1,11 @@
+gymnasium
+imageio
+matplotlib
+moviepy
+numpy
+pandas
+sympy
+tensorboard
+torch
+tqdm
+wandb
