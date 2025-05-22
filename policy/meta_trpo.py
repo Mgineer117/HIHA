@@ -141,8 +141,6 @@ class MetaTRPO_Learner(Base):
         )
         loss_dict.update(norm_dict)
 
-        # Cleanup
-        del states, actions, rewards, terminals, old_logprobs
         self.eval()
 
         timesteps = self.batch_size

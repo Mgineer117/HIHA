@@ -99,6 +99,7 @@ class MetaTrainer:
             desc=f"{self.policy.name} Training (Timesteps)",
         ) as pbar:
             while pbar.n < self.timesteps + self.init_timesteps:
+                # --- START OF EPOCH/ITERATION ---
                 current_step = pbar.n
                 total_timesteps, total_sample_time, total_update_time = 0, 0, 0
                 self.policy.train()
@@ -122,13 +123,13 @@ class MetaTrainer:
 
                 # === First iteration for each vector ===
                 for i in range(self.num_vectors):
-                    batch_i = meta_batch.copy()
+                    batch_i = deepcopy(meta_batch)
 
                     # Use intrinsic rewards from eigenvectors
                     batch_i["rewards"] = self.intrinsic_rewards(
                         batch_i, self.eigenvectors[i]
                     )
-                    policy = self.copy_model(self.policy)
+                    policy = deepcopy(self.policy)
                     critic = self.subtask_critics.critics[i]
 
                     loss_dict, timesteps, update_time, new_policy, gradients, _ = (
@@ -160,7 +161,7 @@ class MetaTrainer:
                             env=self.env, policy=policy, seed=self.seed
                         )
 
-                        option_batch = task_batch.copy()
+                        option_batch = deepcopy(task_batch)
                         option_batch["rewards"] = self.intrinsic_rewards(
                             option_batch, self.eigenvectors[i]
                         )
@@ -239,7 +240,7 @@ class MetaTrainer:
                 )
 
                 # Apply averaged meta-gradient
-                old_policy = self.copy_model(self.policy.actor)
+                old_policy = deepcopy(self.policy.actor)
                 backtrack_iter, backtrack_success = self.trpo_meta_step(
                     policy=self.policy.actor,
                     old_policy=old_policy,
@@ -328,7 +329,9 @@ class MetaTrainer:
 
                     self.save_model(current_step)
 
-                self.deep_delete_policy_and_gradients(policy_dict, gradient_dict)
+                del meta_batch, option_batch, task_batch, policy_dict, gradient_dict
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
 
         self.logger.print(
             f"Total {self.policy.name} training time: {(time.time() - start_time) / 3600} hours"
@@ -382,43 +385,6 @@ class MetaTrainer:
 
         return eval_dict, image_array
 
-    def deep_delete_policy_and_gradients(self, policy_dict, gradient_dict):
-        # Clean gradient_dict
-        for grads in gradient_dict.values():
-            if grads is not None:
-                for g in grads:
-                    if g is not None:
-                        g = g.detach()  # Avoid in-place detach to prevent error
-                        g = g.cpu()
-                        del g
-
-        # Clean models in policy_dict
-        for model in policy_dict.values():
-            if model is not None:
-                model.cpu()
-                model.eval()
-                for param in model.parameters():
-                    if param.grad is not None:
-                        param.grad = param.grad.detach()  # Safe detach
-                        param.grad.zero_()
-                        param.grad = None  # Remove reference
-                for buffer in model.buffers():
-                    buffer = buffer.detach().cpu()  # Detach & move
-                del model
-
-        # Delete dictionaries
-        del policy_dict
-        del gradient_dict
-
-        # Run garbage collection
-        gc.collect()
-        torch.cuda.empty_cache()
-
-    def copy_model(self, model: nn.Module):
-        model = deepcopy(model).cpu()
-        model.to(self.policy.device)
-        return model
-
     def trpo_meta_step(
         self,
         policy: nn.Module,
@@ -455,11 +421,11 @@ class MetaTrainer:
             grads = torch.autograd.grad(kl, model.parameters(), create_graph=True)
             flat_grads = torch.cat([g.view(-1) for g in grads])
             g_v = (flat_grads * v).sum()
-            hv = torch.autograd.grad(g_v, model.parameters(), retain_graph=True)
+            hv = torch.autograd.grad(g_v, model.parameters())
             flat_hv = torch.cat([h.contiguous().view(-1) for h in hv])
             return flat_hv + damping * v
 
-        def conjugate_gradients(Av_func, b, nsteps=15, tol=1e-10):
+        def conjugate_gradients(Av_func, b, nsteps=10, tol=1e-10):
             x = torch.zeros_like(b)
             r = b.clone()
             p = b.clone()
@@ -478,7 +444,7 @@ class MetaTrainer:
             return x
 
         # Flatten meta-gradients
-        meta_grad_flat = torch.cat([g.view(-1) for g in meta_grad])
+        meta_grad_flat = torch.cat([g.view(-1) for g in meta_grad]).detach()
 
         # KL function (closure)
         def kl_fn():
@@ -496,25 +462,22 @@ class MetaTrainer:
         full_step = step_dir / lm
 
         # Apply update
-        old_params = flat_params(policy)
+        with torch.no_grad():
+            old_params = flat_params(policy)
 
-        # Backtracking line search
-        success = False
-        for i in range(backtrack_iters):
-            step_frac = backtrack_coeff**i
-            new_params = old_params - step_frac * full_step
-            set_flat_params(policy, new_params)
-            kl = compute_kl(old_policy, policy, states)
+            # Backtracking line search
+            success = False
+            for i in range(backtrack_iters):
+                step_frac = backtrack_coeff**i
+                new_params = old_params - step_frac * full_step
+                set_flat_params(policy, new_params)
+                kl = compute_kl(old_policy, policy, states)
 
-            if kl <= max_kl:
-                success = True
-                # print(f"Backtracking succeeded at step {i} with KL={kl.item():.5f}")
-                break
-        else:
-            # print(
-            #     "Backtracking failed to satisfy KL constraint. Reverting to old parameters."
-            # )
-            set_flat_params(policy, old_params)
+                if kl <= max_kl:
+                    success = True
+                    break
+            else:
+                set_flat_params(policy, old_params)
 
         return i, success
 
@@ -535,6 +498,7 @@ class MetaTrainer:
 
         # Calculate the intrinsic reward using the eigenvector
         intrinsic_rewards = np.matmul(difference, eigenvector[:, np.newaxis])
+
         return intrinsic_rewards
 
     def discounted_returns(self, rewards, gamma):
