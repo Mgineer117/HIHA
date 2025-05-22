@@ -1,3 +1,4 @@
+import gc
 import os
 import time
 from collections import deque
@@ -327,8 +328,7 @@ class MetaTrainer:
 
                     self.save_model(current_step)
 
-                del policy_dict, gradient_dict
-                torch.cuda.empty_cache()
+                self.deep_delete_policy_and_gradients(policy_dict, gradient_dict)
 
         self.logger.print(
             f"Total {self.policy.name} training time: {(time.time() - start_time) / 3600} hours"
@@ -381,6 +381,38 @@ class MetaTrainer:
         }
 
         return eval_dict, image_array
+
+    def deep_delete_policy_and_gradients(self, policy_dict, gradient_dict):
+        # Clean gradient_dict
+        for grads in gradient_dict.values():
+            if grads is not None:
+                for g in grads:
+                    if g is not None:
+                        g = g.detach()  # Avoid in-place detach to prevent error
+                        g = g.cpu()
+                        del g
+
+        # Clean models in policy_dict
+        for model in policy_dict.values():
+            if model is not None:
+                model.cpu()
+                model.eval()
+                for param in model.parameters():
+                    if param.grad is not None:
+                        param.grad = param.grad.detach()  # Safe detach
+                        param.grad.zero_()
+                        param.grad = None  # Remove reference
+                for buffer in model.buffers():
+                    buffer = buffer.detach().cpu()  # Detach & move
+                del model
+
+        # Delete dictionaries
+        del policy_dict
+        del gradient_dict
+
+        # Run garbage collection
+        gc.collect()
+        torch.cuda.empty_cache()
 
     def copy_model(self, model: nn.Module):
         model = deepcopy(model).cpu()
