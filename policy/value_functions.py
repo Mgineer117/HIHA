@@ -15,7 +15,7 @@ class Critic_Learner(Base):
         critic_lr: float,
         gamma: float,
         gae: float,
-        l2_reg: float = 1e-5,
+        l2_reg: float = 1e-8,
         device=torch.device("cpu"),
     ):
         super(Critic_Learner, self).__init__()
@@ -114,7 +114,7 @@ class Critics_Learner(Base):
         num: int,
         gamma: float,
         gae: float,
-        l2_reg: float = 1e-5,
+        l2_reg: float = 1e-8,
         device=torch.device("cpu"),
     ):
         super(Critics_Learner, self).__init__()
@@ -184,7 +184,7 @@ class Critics_Learner(Base):
             self.optimizers[idx].step()
 
         loss_dict = {
-            f"{self.name}-{prefix}/loss/value_loss-{idx}": np.mean(value_loss_list),
+            f"{self.name}-{prefix}/loss/value_loss": np.mean(value_loss_list),
             f"{self.name}-{prefix}/loss/l2_loss": np.mean(l2_loss_list),
         }
         norm_dict = self.compute_weight_norm(

@@ -127,8 +127,8 @@ class MetaTrainer:
                     batch_i["rewards"] = self.intrinsic_rewards(
                         batch_i, self.eigenvectors[i]
                     )
-                    policy = deepcopy(self.policy)
-                    critic = deepcopy(self.subtask_critics.critics[i])
+                    policy = self.copy_model(self.policy)
+                    critic = self.subtask_critics.critics[i]
 
                     loss_dict, timesteps, update_time, new_policy, gradients, _ = (
                         policy.learn(critic, batch_i, "local")
@@ -173,7 +173,7 @@ class MetaTrainer:
                         )
 
                         if prefix == "local":
-                            critic = deepcopy(self.subtask_critics.critics[i])
+                            critic = self.subtask_critics.critics[i]
                             (
                                 loss_dict,
                                 timesteps,
@@ -184,7 +184,7 @@ class MetaTrainer:
                             ) = policy.learn(critic, option_batch, prefix)
 
                         else:
-                            critic = deepcopy(self.task_critics.critics[i])
+                            critic = self.task_critics.critics[i]
                             (
                                 loss_dict,
                                 timesteps,
@@ -238,7 +238,7 @@ class MetaTrainer:
                 )
 
                 # Apply averaged meta-gradient
-                old_policy = deepcopy(self.policy.actor)
+                old_policy = self.copy_model(self.policy.actor)
                 backtrack_iter, backtrack_success = self.trpo_meta_step(
                     policy=self.policy.actor,
                     old_policy=old_policy,
@@ -327,6 +327,7 @@ class MetaTrainer:
 
                     self.save_model(current_step)
 
+                del policy_dict, gradient_dict
                 torch.cuda.empty_cache()
 
         self.logger.print(
@@ -380,6 +381,11 @@ class MetaTrainer:
         }
 
         return eval_dict, image_array
+
+    def copy_model(self, model: nn.Module):
+        model = deepcopy(model).cpu()
+        model.to(self.policy.device)
+        return model
 
     def trpo_meta_step(
         self,

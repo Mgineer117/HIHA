@@ -37,6 +37,10 @@ def run(args, seed, unique_id, exp_time):
         raise NotImplementedError(f"{args.algo_name} is not implemented.")
 
     algo.begin_training()
+
+    # ✅ Memory cleanup
+    del algo, env, logger, writer  # delete large references
+    torch.cuda.empty_cache()  # release unreferenced GPU memory
     wandb.finish()
 
 

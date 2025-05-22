@@ -111,7 +111,7 @@ class ExtractorTrainer:
                     if np.mean(self.loss_list) < self.last_min_loss:
                         self.save_model(step)
 
-            torch.cuda.empty_cache()
+                torch.cuda.empty_cache()
 
         self.logger.print(
             "total extractor training time: {:.2f} hours".format(
